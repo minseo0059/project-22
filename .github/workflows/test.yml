@@ -84,8 +84,50 @@ jobs:
           ALB_ACM_CERT_ARN=$(terraform output -raw alb_acm_certificate_arn | sed 's/^.*output -raw alb_acm_certificate_arn//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
           EC2_INSTANCE_ID=$(terraform output -raw ec2_instance_id | sed 's/^.*output -raw ec2_instance_id//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
           EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip | sed 's/^.*output -raw ec2_public_ip//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
-          VPC_ID=$(terraform output -raw VPC_ID | sed 's/^.*output -raw VPC_ID//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          VPC_ID=$(terraform output -raw vpc_id | sed 's/^.*output -raw vpc_id//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          
+          echo "🔍 RDS_ENDPOINT=$RDS_ENDPOINT"
+          echo "🔍 S3_BUCKET=$S3_BUCKET"
+          echo "🔍 EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME"
+          echo "🔍 ECR_REPOSITORY_URL=$ECR_REPOSITORY_URL"
+          echo "🔍 ALB_ACM_CERT_ARN=$ALB_ACM_CERT_ARN"
+          echo "🔍 EC2_INSTANCE_ID=$EC2_INSTANCE_ID"
+          echo "🔍 EC2_PUBLIC_IP=$EC2_PUBLIC_IP"
+          echo "🔍 EC2_PUBLIC_IP=$VPC_ID"
 
+          if [ -z "$RDS_ENDPOINT" ]; then
+            echo "❌ Error: Terraform output 'rds_endpoint' is empty."
+            exit 1
+          fi
+          if [ -z "$S3_BUCKET" ]; then
+            echo "❌ Error: Terraform output 'my_bucket_name' is empty."
+            exit 1
+          fi
+          if [ -z "$EKS_CLUSTER_NAME" ]; then
+            echo "❌ Error: Terraform output 'eks_cluster_name' is empty."
+            exit 1
+          fi
+          if [ -z "$ECR_REPOSITORY_URL" ]; then
+            echo "❌ Error: Terraform output 'alb_acm_certificate_arn' is empty."
+            exit 1
+          fi
+          if [ -z "$ALB_ACM_CERT_ARN" ]; then
+            echo "❌ Error: Terraform output 'alb_acm_certificate_arn' is empty."
+            exit 1
+          fi
+          if [ -z "$EC2_INSTANCE_ID" ]; then
+            echo "❌ Error: Terraform output 'ec2_instance_id' is empty."
+            exit 1
+          fi
+          if [ -z "$EC2_PUBLIC_IP" ]; then
+            echo "❌ Error: Terraform output 'ec2_public_ip' is empty."
+            exit 1
+          fi
+          if [ -z "$VPC_ID" ]; then
+            echo "❌ Error: Terraform output 'vpc_id' is empty."
+            exit 1
+          fi
+          
           echo "✅ Exporting outputs to GITHUB_ENV..."
           {
             echo "TF_RDS_ENDPOINT<<EOF"
