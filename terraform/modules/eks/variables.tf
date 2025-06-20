@@ -51,4 +51,5 @@ variable "region" {
 variable "service_account_name" {
   description = "ALB Controller에 사용할 서비스 계정 이름"
   type        = string
+  default     = "aws-load-balancer-controller"
 }
