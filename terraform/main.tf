@@ -65,7 +65,7 @@ module "alb" {
   subnets               = module.vpc.public_subnet_ids  # 퍼블릭 서브넷에 배치
   vpc_id                = module.vpc.vpc_id  # VPC ID
   acm_certificate_arn   = module.acm_alb.acm_certificate_arn  # ALB에 적용할 인증서 ARN
-  target_group_port     = 31861 # nodePort 로 타겟포트 지정
+  target_group_port     = 2342 # nodePort 로 타겟포트 지정
   enable_deletion_protection = false  # ALB 삭제 방지 비활성화 (운영환경에서는 true 권장)
 }
 
