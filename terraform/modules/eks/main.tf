@@ -127,9 +127,10 @@ resource "helm_release" "alb_controller" {
   version    = "1.4.1"
   namespace  = "kube-system"
 
+  # 필수 설정
   set {
     name  = "clusterName"
-    value = var.cluster_name
+    value = var.eks_cluster_name  # 실제 클러스터 이름 변수
   }
 
   set {
@@ -140,5 +141,16 @@ resource "helm_release" "alb_controller" {
   set {
     name  = "serviceAccount.name"
     value = "aws-load-balancer-controller"
+  }
+
+  # 선택적 설정 (필요시)
+  set {
+    name  = "region"
+    value = var.aws_region
+  }
+
+  set {
+    name  = "vpcId"
+    value = var.vpc_id
   }
 }
