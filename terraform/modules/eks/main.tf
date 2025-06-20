@@ -127,10 +127,10 @@ resource "helm_release" "alb_controller" {
   version    = "1.4.1"
   namespace  = "kube-system"
 
-  # 필수 설정
+  # 올바른 set 사용법 (인자 형식)
   set {
     name  = "clusterName"
-    value = var.eks_cluster_name  # 실제 클러스터 이름 변수
+    value = var.cluster_name
   }
 
   set {
@@ -143,7 +143,6 @@ resource "helm_release" "alb_controller" {
     value = "aws-load-balancer-controller"
   }
 
-  # 선택적 설정 (필요시)
   set {
     name  = "region"
     value = var.aws_region
