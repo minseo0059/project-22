@@ -5,17 +5,15 @@
 provider "aws" {
   region = var.region  # variables.tf에서 정의한 리전 사용 (기본값: ap-northeast-2)
 }
-terraform {
-  required_providers {
-    helm = {
-      source  = "hashicorp/helm"
-      version = ">= 2.0.0"
-    }
-  }
+provider "kubernetes" {
+  config_path = "${path.root}/kubeconfig_${var.cluster_name}"
 }
 provider "helm" {
-  kubernetes_config_path = "${path.root}/kubeconfig_${var.cluster_name}"
+  kubernetes {
+    config_path = "${path.root}/kubeconfig_${var.cluster_name}"
+  }
 }
+
 # 기존 Route53 호스팅 존 데이터 조회
 data "aws_route53_zone" "existing" {
   zone_id = "Z07063203QA24KJ72X4MN"  # 기존 호스팅 존 ID
