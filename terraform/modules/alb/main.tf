@@ -48,6 +48,7 @@ resource "aws_lb" "this" {
 # 타겟 그룹 리소스 생성 (ALB가 트래픽을 라우팅할 대상)
 resource "aws_lb_target_group" "this" {
   name     = var.target_group_name      # 타겟 그룹 이름 (기본값: "my-target-group")
+  target_type = "ip"
   port     = var.target_group_port      # 대상 애플리케이션 포트 (기본값: 80)
   protocol = var.target_group_protocol  # 프로토콜 (기본값: HTTP)
   vpc_id   = var.vpc_id                 # 대상이 위치한 VPC ID (필수 입력)
