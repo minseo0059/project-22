@@ -245,11 +245,15 @@ jobs:
 
           echo "📦 Deployment 환경변수 치환"
           envsubst < k8s/deployment.yml > k8s/deployment.rendered.yml
-
+          
+          echo "🌐 Ingress 렌더링"
+          envsubst < k8s/ingress.yml > k8s/ingress.rendered.yml
+          
           echo "🚀 Kubernetes에 적용"
           kubectl apply -f k8s/configmap.rendered.yml
           kubectl apply -f k8s/secret.rendered.yml
           kubectl apply -f k8s/deployment.rendered.yml
+          kubectl apply -f k8s/ingress.rendered.yml
           kubectl apply -f k8s/service.yml
         
 
@@ -264,8 +268,3 @@ jobs:
           kubectl describe deployment photoprism
           kubectl logs deployment/photoprism || true
           kubectl get events --sort-by=.metadata.creationTimestamp
-
-
-# echo "🌐 Ingress 렌더링"
-# envsubst < k8s/ingress.yml > k8s/ingress.rendered.yml
-# kubectl apply -f k8s/ingress.rendered.yml
