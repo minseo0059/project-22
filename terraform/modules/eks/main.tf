@@ -140,7 +140,11 @@ resource "helm_release" "alb_controller" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   version    = "1.4.1"
-  depends_on = [aws_eks_cluster.this, aws_eks_node_group.main]
+  depends_on = [
+    aws_eks_cluster.this,
+    aws_eks_node_group.main,
+    local_file.kubeconfig
+  ]
 
   set = [
     {
