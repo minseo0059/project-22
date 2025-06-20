@@ -35,11 +35,9 @@ resource "aws_security_group" "eks_nodes" {
     Name = "${var.cluster_name}-eks-nodes"
   }
 }
-
-resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
-  role       = "photoprism-eks-node-role"
-  policy_arn = aws_iam_policy.alb_controller.arn
-}
+resource "aws_iam_role_policy_attachment" "cluster_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.cluster.name
 
 # EKS 클러스터 생성
 resource "aws_eks_cluster" "this" {
