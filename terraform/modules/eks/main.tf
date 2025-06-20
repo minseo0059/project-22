@@ -115,41 +115,37 @@ resource "local_file" "kubeconfig" {
 }
 
 # EKS 노드에 ECR 접근 권한 추가
-resource "aws_iam_role_policy_attachment" "ecr_full_access" {
-  role       = aws_iam_role.nodes.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
-}
-
 resource "helm_release" "alb_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-  version    = "1.4.1"
   namespace  = "kube-system"
+  version    = "1.4.1"
 
-  # 올바른 set 사용법 (인자 형식)
-  set {
-    name  = "clusterName"
-    value = var.cluster_name
-  }
+  set = [
+    {
+      name  = "clusterName"
+      value = var.cluster_name
+    },
+    {
+      name  = "region"
+      value = var.region
+    },
+    {
+      name  = "vpcId"
+      value = var.vpc_id
+    },
+    {
+      name  = "serviceAccount.create"
+      value = "false"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = var.service_account_name
+    }
+  ]
+}
 
-  set {
-    name  = "serviceAccount.create"
-    value = "true"
-  }
-
-  set {
-    name  = "serviceAccount.name"
-    value = "aws-load-balancer-controller"
-  }
-
-  set {
-    name  = "region"
-    value = var.aws_region
-  }
-
-  set {
-    name  = "vpcId"
     value = var.vpc_id
   }
 }
