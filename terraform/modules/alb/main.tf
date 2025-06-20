@@ -77,3 +77,18 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.this.arn  # 전달할 타겟 그룹 ARN
   }
 }
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
