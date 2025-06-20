@@ -169,26 +169,26 @@ jobs:
       - name: Login to AWS ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and Push Docker Image
-        # 이전 단계에서 GITHUB_ENV에 저장한 변수를 여기서 사용합니다.
-        env:
-          PHOTOPRISM_DATABASE_SERVER: ${{ env.TF_RDS_ENDPOINT }}
-          PHOTOPRISM_S3_BUCKET: ${{ env.TF_S3_BUCKET }}
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --progress plain \
-            --build-arg PHOTOPRISM_DATABASE_SERVER="$PHOTOPRISM_DATABASE_SERVER" \
-            --build-arg PHOTOPRISM_DATABASE_NAME="$PHOTOPRISM_DATABASE_NAME" \
-            --build-arg PHOTOPRISM_DATABASE_USER="${{ secrets.PHOTOPRISM_DATABASE_USER }}" \
-            --build-arg PHOTOPRISM_DATABASE_PASSWORD="${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}" \
-            --build-arg PHOTOPRISM_ADMIN_PASSWORD="${{ secrets.PHOTOPRISM_ADMIN_PASSWORD }}" \
-            --build-arg PHOTOPRISM_S3_BUCKET="$PHOTOPRISM_S3_BUCKET" \
-            --build-arg AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            --build-arg AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            --build-arg AWS_REGION="${{ env.AWS_REGION }}" \
-            -t "$ECR_REGISTRY:latest" \
-            --push .
+ #     - name: Build and Push Docker Image
+ #       # 이전 단계에서 GITHUB_ENV에 저장한 변수를 여기서 사용합니다.
+ #       env:
+ #         PHOTOPRISM_DATABASE_SERVER: ${{ env.TF_RDS_ENDPOINT }}
+ #         PHOTOPRISM_S3_BUCKET: ${{ env.TF_S3_BUCKET }}
+ #       run: |
+ #         docker buildx build \
+ #           --platform linux/amd64 \
+ #           --progress plain \
+ #           --build-arg PHOTOPRISM_DATABASE_SERVER="$PHOTOPRISM_DATABASE_SERVER" \
+ #           --build-arg PHOTOPRISM_DATABASE_NAME="$PHOTOPRISM_DATABASE_NAME" \
+ #           --build-arg PHOTOPRISM_DATABASE_USER="${{ secrets.PHOTOPRISM_DATABASE_USER }}" \
+ #           --build-arg PHOTOPRISM_DATABASE_PASSWORD="${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}" \
+ #           --build-arg PHOTOPRISM_ADMIN_PASSWORD="${{ secrets.PHOTOPRISM_ADMIN_PASSWORD }}" \
+ #           --build-arg PHOTOPRISM_S3_BUCKET="$PHOTOPRISM_S3_BUCKET" \
+ #           --build-arg AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+ #           --build-arg AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+ #           --build-arg AWS_REGION="${{ env.AWS_REGION }}" \
+ #           -t "$ECR_REGISTRY:latest" \
+ #           --push .
 
       # --- 4. 데이터베이스 스키마 생성 및 EKS 배포 ---
 
