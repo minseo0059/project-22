@@ -13,6 +13,7 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: "/api/v1/status"
 spec:
+  ingressClassName: alb
   rules:
   - host: 5585in.click
     http:
