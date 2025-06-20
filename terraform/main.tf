@@ -5,26 +5,6 @@
 provider "aws" {
   region = var.region  # variables.tf에서 정의한 리전 사용 (기본값: ap-northeast-2)
 }
-terraform {
-  required_providers {
-    helm = {
-      source  = "hashicorp/helm"
-      version = ">= 2.0.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = ">= 2.0.0"
-    }
-  }
-}
-
-provider "kubernetes" {
-  config_path = "${path.root}/kubeconfig_${var.cluster_name}"
-}
-
-provider "helm" {
-  # helm provider는 kubernetes provider와 자동 연결됨
-}
 
 # 기존 Route53 호스팅 존 데이터 조회
 data "aws_route53_zone" "existing" {
@@ -133,11 +113,6 @@ module "eks" {
   vpc_id          = module.vpc.vpc_id          # 기존 VPC 모듈 참조
   private_subnets = module.vpc.private_subnet_ids # 프라이빗 서브넷 전달
   alb_sg_id       = module.alb.alb_sg_id
-  region          = var.region
-  providers = {
-    kubernetes = kubernetes
-    helm       = helm
-  }
 }
 
 # EKS ↔ RDS 보안 그룹 규칙 (루트에 추가)
