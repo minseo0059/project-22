@@ -113,6 +113,7 @@ module "eks" {
   vpc_id          = module.vpc.vpc_id          # 기존 VPC 모듈 참조
   private_subnets = module.vpc.private_subnet_ids # 프라이빗 서브넷 전달
   alb_sg_id       = module.alb.alb_sg_id
+  region          = var.region
 }
 
 # EKS ↔ RDS 보안 그룹 규칙 (루트에 추가)
