@@ -126,6 +126,9 @@ module "eks" {
   private_subnets = module.vpc.private_subnet_ids # 프라이빗 서브넷 전달
   alb_sg_id       = module.alb.alb_sg_id
   region          = var.region
+  providers = {
+    helm = helm
+  }
 }
 
 # EKS ↔ RDS 보안 그룹 규칙 (루트에 추가)
