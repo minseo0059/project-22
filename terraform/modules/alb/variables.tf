@@ -43,7 +43,7 @@ variable "target_group_name" {
 variable "target_group_port" {
   description = "The port for the target group"  # 대상 애플리케이션 포트
   type        = number
-  default     = 80  # 기본값: HTTP(80)
+  default     = 2342  # 기본값: HTTP(80)
 }
 
 variable "target_group_protocol" {
@@ -61,7 +61,8 @@ variable "vpc_id" {
 variable "health_check_path" {
   description = "The health check path for the target group"  # 헬스 체크 엔드포인트
   type        = string
-  default     = "/health"  # 기본값: 루트 경로
+# default     = "/health"  # 기본값: 루트 경로
+  default     = "/api/v1/status"
 }
 
 variable "health_check_interval" {
