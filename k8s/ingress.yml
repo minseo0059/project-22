@@ -11,6 +11,7 @@ metadata:
       [{"field":"http-header","httpHeaderConfig":{"httpHeaderName": "User-Agent","values":["*"]}}]
     alb.ingress.kubernetes.io/certificate-arn: "${TF_ALB_ACM_CERT_ARN}"
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: "/api/v1/status"
 spec:
   rules:
   - host: 5585in.click
