@@ -121,6 +121,7 @@ resource "helm_release" "alb_controller" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   version    = "1.4.1"
+  depends_on = [local_file.kubeconfig]
 
   set = [
     {
