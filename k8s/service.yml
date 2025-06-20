@@ -5,10 +5,10 @@ metadata:
   labels:
     app: photoprism
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: photoprism
   ports:
   - port: 2342
     targetPort: 2342
-    nodePort: 31861 
+ #   nodePort: 31861 
