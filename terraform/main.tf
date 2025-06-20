@@ -14,9 +14,7 @@ terraform {
   }
 }
 provider "helm" {
-  kubernetes {
-    config_path = "${path.root}/kubeconfig_${var.cluster_name}"
-  }
+  kubernetes_config_path = "${path.root}/kubeconfig_${var.cluster_name}"
 }
 # 기존 Route53 호스팅 존 데이터 조회
 data "aws_route53_zone" "existing" {
