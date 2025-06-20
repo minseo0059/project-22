@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.0.0"
+    }
+  }
+}
+
 # EKS 클러스터 IAM 역할
 resource "aws_iam_role" "cluster" {
   name = "${var.cluster_name}-cluster-role"
@@ -144,8 +153,4 @@ resource "helm_release" "alb_controller" {
       value = var.service_account_name
     }
   ]
-}
-
-    value = var.vpc_id
-  }
 }
