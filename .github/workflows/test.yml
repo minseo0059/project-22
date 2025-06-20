@@ -212,6 +212,12 @@ jobs:
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name ${{ env.TF_EKS_CLUSTER_NAME }}
+
       - name: Helm install cluster
         run: |
           helm repo add eks https://aws.github.io/eks-charts
@@ -260,12 +266,6 @@ jobs:
       - name: Terraform Apply (Private RDS)
         working-directory: terraform
         run: terraform apply -var-file="terraform.tfvars" -var="rds_publicly_accessible=false" -auto-approve -input=false
-
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig \
-            --region ${{ secrets.AWS_REGION }} \
-            --name ${{ env.TF_EKS_CLUSTER_NAME }}
 
       - name: Render and Deploy ConfigMap and Secret
         env:
