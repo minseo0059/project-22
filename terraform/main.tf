@@ -8,10 +8,9 @@ provider "aws" {
 provider "kubernetes" {
   config_path = "${path.root}/kubeconfig_${var.cluster_name}"
 }
+
 provider "helm" {
-  kubernetes {
-    config_path = "${path.root}/kubeconfig_${var.cluster_name}"
-  }
+  # 아무 옵션도 안 넣어도 됨 (kubernetes provider와 연동됨)
 }
 
 # 기존 Route53 호스팅 존 데이터 조회
