@@ -1,0 +1,289 @@
+# GitHub Actions 워크플로우 이름
+name: Deploy Infrastructure and Application with Terraform
+
+# 워크플로우 실행 조건: 수동 실행 (workflow_dispatch)
+on:
+  workflow_dispatch:
+
+# 워크플로우 전체에서 사용할 환경 변수
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REPOSITORY_URI }}
+
+# 워크플로우 작업(Jobs) 정의
+jobs:
+  # 인프라 배포, DB 설정, 어플리케이션 배포를 모두 수행하는 단일 작업
+  deploy-and-configure:
+    name: "Deploy Infra, Configure DB, and Deploy App"
+    runs-on: ubuntu-latest
+    # 이 작업에 필요한 권한 설정
+    permissions:
+      id-token: write   # AWS OIDC 인증 시 필요
+      contents: read    # 코드 체크아웃 시 필요
+
+    steps:
+      # --- 1. Terraform으로 인프라 배포 ---
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.6
+
+      - name: Create terraform.tfvars
+        run: |
+          mkdir -p terraform
+          cat <<EOF > terraform/terraform.tfvars
+          rds_config = {
+            db_name     = "${{ secrets.PHOTOPRISM_DATABASE_NAME }}"
+            db_user     = "${{ secrets.PHOTOPRISM_DATABASE_USER }}"
+            db_password = "${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}"
+          }
+          s3_config = {
+            bucket_name = "${{ secrets.PHOTOPRISM_S3_BUCKET }}"
+          }
+          EOF
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=terraform/infra.tfstate" -backend-config="region=${{ secrets.AWS_REGION }}"
+        
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Terraform Plan (Public RDS)
+        working-directory: terraform
+        run: terraform plan -var-file="terraform.tfvars" -var="rds_publicly_accessible=true" -input=false
+
+      - name: Terraform Apply (Public RDS)
+        working-directory: terraform
+        run: terraform apply -var-file="terraform.tfvars" -var="rds_publicly_accessible=true" -auto-approve -input=false
+
+      # --- 2. Terraform 결과값을 환경 변수로 설정 ---
+
+      - name: Export Terraform Outputs to Environment
+        id: tf_outputs
+        working-directory: terraform
+        run: |
+          echo "📤 Running terraform output"
+
+          RDS_ENDPOINT=$(terraform output -raw rds_endpoint | sed 's/^.*output -raw rds_endpoint//' | sed 's/:3306//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          S3_BUCKET=$(terraform output -raw my_bucket_name | sed 's/^.*output -raw my_bucket_name//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name | sed 's/^.*output -raw eks_cluster_name//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          ECR_REPOSITORY_URL=$(terraform output -raw ecr_repository_url | sed 's/^.*output -raw ecr_repository_url//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          ALB_ACM_CERT_ARN=$(terraform output -raw alb_acm_certificate_arn | sed 's/^.*output -raw alb_acm_certificate_arn//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          EC2_INSTANCE_ID=$(terraform output -raw ec2_instance_id | sed 's/^.*output -raw ec2_instance_id//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+          EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip | sed 's/^.*output -raw ec2_public_ip//' | sed 's/::debug::.*//' | tr -d '\n' | xargs)
+
+          echo "🔍 RDS_ENDPOINT=$RDS_ENDPOINT"
+          echo "🔍 S3_BUCKET=$S3_BUCKET"
+          echo "🔍 EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME"
+          echo "🔍 ECR_REPOSITORY_URL=$ECR_REPOSITORY_URL"
+          echo "🔍 ALB_ACM_CERT_ARN=$ALB_ACM_CERT_ARN"
+          echo "🔍 EC2_INSTANCE_ID=$EC2_INSTANCE_ID"
+          echo "🔍 EC2_PUBLIC_IP=$EC2_PUBLIC_IP"
+
+          if [ -z "$RDS_ENDPOINT" ]; then
+            echo "❌ Error: Terraform output 'rds_endpoint' is empty."
+            exit 1
+          fi
+          if [ -z "$S3_BUCKET" ]; then
+            echo "❌ Error: Terraform output 'my_bucket_name' is empty."
+            exit 1
+          fi
+          if [ -z "$EKS_CLUSTER_NAME" ]; then
+            echo "❌ Error: Terraform output 'eks_cluster_name' is empty."
+            exit 1
+          fi
+          if [ -z "$ECR_REPOSITORY_URL" ]; then
+            echo "❌ Error: Terraform output 'alb_acm_certificate_arn' is empty."
+            exit 1
+          fi
+          if [ -z "$ALB_ACM_CERT_ARN" ]; then
+            echo "❌ Error: Terraform output 'alb_acm_certificate_arn' is empty."
+            exit 1
+          fi
+          if [ -z "$EC2_INSTANCE_ID" ]; then
+            echo "❌ Error: Terraform output 'ec2_instance_id' is empty."
+            exit 1
+          fi
+          if [ -z "$EC2_PUBLIC_IP" ]; then
+            echo "❌ Error: Terraform output 'ec2_public_ip' is empty."
+            exit 1
+          fi
+
+          echo "✅ Exporting outputs to GITHUB_ENV..."
+          {
+            echo "TF_RDS_ENDPOINT<<EOF"
+            echo "$RDS_ENDPOINT"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+          {
+            echo "TF_S3_BUCKET<<EOF"
+            echo "$S3_BUCKET"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+          {
+            echo "TF_EKS_CLUSTER_NAME<<EOF"
+            echo "$EKS_CLUSTER_NAME"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+          {
+            echo "TF_ECR_REPOSITORY_URL<<EOF"
+            echo "$ECR_REPOSITORY_URL"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+          {
+            echo "TF_ALB_ACM_CERT_ARN<<EOF"
+            echo "$ALB_ACM_CERT_ARN"
+            echo "EOF"
+          } >> $GITHUB_ENV
+          {
+            echo "TF_EC2_INSTANCE_ID<<EOF"
+            echo "$EC2_INSTANCE_ID"
+            echo "EOF"
+          } >> $GITHUB_ENV
+          {
+            echo "TF_EC2_PUBLIC_IP<<EOF"
+            echo "$EC2_PUBLIC_IP"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+
+      # --- 3. Docker 이미지 빌드 및 푸시 ---
+      
+      - name: Login to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Docker Image
+        # 이전 단계에서 GITHUB_ENV에 저장한 변수를 여기서 사용합니다.
+        env:
+          PHOTOPRISM_DATABASE_SERVER: ${{ env.TF_RDS_ENDPOINT }}
+          PHOTOPRISM_S3_BUCKET: ${{ env.TF_S3_BUCKET }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --progress plain \
+            --build-arg PHOTOPRISM_DATABASE_SERVER="$PHOTOPRISM_DATABASE_SERVER" \
+            --build-arg PHOTOPRISM_DATABASE_NAME="$PHOTOPRISM_DATABASE_NAME" \
+            --build-arg PHOTOPRISM_DATABASE_USER="${{ secrets.PHOTOPRISM_DATABASE_USER }}" \
+            --build-arg PHOTOPRISM_DATABASE_PASSWORD="${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}" \
+            --build-arg PHOTOPRISM_ADMIN_PASSWORD="${{ secrets.PHOTOPRISM_ADMIN_PASSWORD }}" \
+            --build-arg PHOTOPRISM_S3_BUCKET="$PHOTOPRISM_S3_BUCKET" \
+            --build-arg AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            --build-arg AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            --build-arg AWS_REGION="${{ env.AWS_REGION }}" \
+            -t "$ECR_REGISTRY:latest" \
+            --push .
+
+      # --- 4. 데이터베이스 스키마 생성 및 EKS 배포 ---
+
+      - name: Install required tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base jq mysql-client
+
+          # kubectl 설치
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Create database in RDS
+        # 이전 단계에서 GITHUB_ENV에 저장한 변수를 여기서 사용합니다.
+        env:
+          RDS_ENDPOINT: ${{ env.TF_RDS_ENDPOINT }}
+          DB_USER: ${{ secrets.PHOTOPRISM_DATABASE_USER }}
+          DB_PASSWORD: ${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}
+          DB_NAME: ${{ secrets.PHOTOPRISM_DATABASE_NAME }}
+        run: |
+          echo "🔍 RDS_ENDPOINT=$RDS_ENDPOINT"
+
+          RDS_HOST="${RDS_ENDPOINT%%:*}"
+          RDS_PORT="${RDS_ENDPOINT##*:}"
+
+          if [ "$RDS_HOST" == "$RDS_PORT" ]; then
+            echo "⚠️ Port not found in RDS_ENDPOINT, defaulting to 3306."
+            RDS_PORT="3306"
+          fi
+          
+          echo "🔌 Attempting to connect to RDS host: '$RDS_HOST' on port '$RDS_PORT'..."
+          
+          mysql -h "$RDS_HOST" -P "$RDS_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1;" --connect-timeout=15 || {
+            echo "❌ RDS connection failed."
+            exit 1
+          }
+
+          echo "✅ RDS connection successful."
+          echo "🛠️ Creating database '$DB_NAME' if it does not exist..."
+          
+          mysql -h "$RDS_HOST" -P "$RDS_PORT" -u "$DB_USER" -p"$DB_PASSWORD" \
+                -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\`;"
+
+          echo "✅ Database creation command sent."
+
+      - name: Terraform Apply (Private RDS)
+        working-directory: terraform
+        run: terraform apply -var-file="terraform.tfvars" -var="rds_publicly_accessible=false" -auto-approve -input=false
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name ${{ env.TF_EKS_CLUSTER_NAME }}
+
+      - name: Render and Deploy ConfigMap and Secret
+        env:
+          TF_RDS_ENDPOINT: ${{ env.TF_RDS_ENDPOINT }}
+          TF_S3_BUCKET: ${{ env.TF_S3_BUCKET }}
+          TF_ALB_ACM_CERT_ARN: ${{ env.TF_ALB_ACM_CERT_ARN }}
+          PHOTOPRISM_DATABASE_USER: ${{ secrets.PHOTOPRISM_DATABASE_USER }}
+          PHOTOPRISM_DATABASE_PASSWORD: ${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}
+          PHOTOPRISM_ADMIN_PASSWORD: ${{ secrets.PHOTOPRISM_ADMIN_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+        run: |
+          echo "🔧 ConfigMap 환경변수 치환"
+          envsubst < k8s/configmap.yml > k8s/configmap.rendered.yml
+          
+          echo "🔐 Secret 환경변수 치환"
+          envsubst < k8s/secret.yml > k8s/secret.rendered.yml
+
+          echo "📦 Deployment 환경변수 치환"
+          envsubst < k8s/deployment.yml > k8s/deployment.rendered.yml
+          
+          echo "🌐 Ingress 렌더링"
+          envsubst < k8s/ingress.yml > k8s/ingress.rendered.yml
+
+          echo "🚀 Kubernetes에 적용"
+          kubectl apply -f k8s/configmap.rendered.yml
+          kubectl apply -f k8s/secret.rendered.yml
+          kubectl apply -f k8s/deployment.rendered.yml
+          kubectl apply -f k8s/service.yml
+          kubectl apply -f k8s/ingress.rendered.yml
+
+          echo "⏳ 배포 상태 확인 중..."
+          kubectl rollout status deployment/photoprism --timeout=90s
+
+      - name: Debug if deployment fails
+        if: failure()
+        run: |
+          echo "❌ 배포 실패! 디버깅 시작"
+          kubectl get all
+          kubectl describe deployment photoprism
+          kubectl logs deployment/photoprism || true
+          kubectl get events --sort-by=.metadata.creationTimestamp

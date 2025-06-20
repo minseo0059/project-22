@@ -1,0 +1,5 @@
+#!/bin/bash
+# 현재 S3 버킷 데이터를 → 백업 버킷의 s3/ 경로에 복사
+aws s3 sync s3://{{ PHOTOPRISM_S3_BUCKET }}/originals s3://{{ TF_STATE_BUCKET }}/s3/ \
+  --delete \
+  --storage-class STANDARD_IA

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DATE=$(date +%F-%H-%M)
+FILENAME="rds-backup-$DATE.sql.gz"
+
+mysqldump -h {{ rds_endpoint }} -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} | gzip > /tmp/$FILENAME
+
+aws s3 cp /tmp/$FILENAME s3://{{ backup_bucket }}/rds/$FILENAME
+rm -f /tmp/$FILENAME

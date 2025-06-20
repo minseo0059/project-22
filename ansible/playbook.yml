@@ -1,0 +1,42 @@
+# playbook.yml
+- name: Set up Bastion server with backup automation
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install basic packages
+      apt:
+        name:
+          - htop
+          - fail2ban
+        state: present
+
+    - name: Template S3 backup script
+      template:
+        src: s3_backup.sh.j2
+        dest: /usr/local/bin/s3_backup.sh
+        mode: '0755'
+
+    - name: Template RDS backup script
+      template:
+        src: rds_backup.sh.j2
+        dest: /usr/local/bin/rds_backup.sh
+        mode: '0755'
+
+    - name: Add cron job for hourly S3 backup
+      cron:
+        name: "Hourly S3 backup"
+        job: "/usr/local/bin/s3_backup.sh"
+        minute: "0"
+
+    - name: Add cron job for hourly RDS backup
+      cron:
+        name: "Hourly RDS backup"
+        job: "/usr/local/bin/rds_backup.sh"
+        minute: "30"

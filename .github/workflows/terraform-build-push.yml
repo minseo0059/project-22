@@ -1,0 +1,115 @@
+name: Deploy with Terraform
+
+on:
+  #push:
+  #  branches: [ main ]
+  workflow_dispatch:
+  
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REPOSITORY_URI }}
+  
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+      # AWS 자격 증명 설정 추가
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0  # 명시적 버전 지정
+
+    - name: Create terraform.tfvars
+      run: |
+        mkdir -p terraform
+        cat <<EOF > terraform/terraform.tfvars
+        rds_config = {
+          db_name     = "${{ secrets.PHOTOPRISM_DATABASE_NAME }}"
+          db_user     = "${{ secrets.PHOTOPRISM_DATABASE_USER }}"
+          db_password = "${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}"
+        }
+
+        s3_config = {
+          bucket_name = "${{ secrets.PHOTOPRISM_S3_BUCKET }}"
+        }
+        EOF
+
+    - name: Terraform Init
+      working-directory: terraform
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+          -backend-config="key=terraform/infra.tfstate" \
+          -backend-config="region=${{ secrets.AWS_REGION }}"
+
+    - name: Terraform Validate
+      working-directory: terraform
+      run: terraform validate
+
+    - name: Terraform Plan (디버깅용)
+      working-directory: terraform
+      run: terraform plan -var-file="terraform.tfvars" -input=false -lock=false
+
+    - name: Terraform Apply
+      working-directory: terraform
+      run: terraform apply -var-file="terraform.tfvars" -auto-approve -input=false -lock=false
+
+    - name: Export Terraform Outputs
+      id: tf_outputs
+      working-directory: terraform
+      run: |
+        echo "PHOTOPRISM_DATABASE_SERVER=$(terraform output -raw rds_endpoint | tr -d '\n')" >> $GITHUB_ENV
+        echo "PHOTOPRISM_S3_BUCKET=$(terraform output -raw my_bucket_name | tr -d '\n')" >> $GITHUB_ENV
+        echo "PHOTOPRISM_DATABASE_NAME=${{ secrets.PHOTOPRISM_DATABASE_NAME }}" >> $GITHUB_ENV
+        echo "PHOTOPRISM_DATABASE_USER=${{ secrets.PHOTOPRISM_DATABASE_USER }}" >> $GITHUB_ENV
+        echo "TF_OUTPUTS_EXPORTED=true" >> $GITHUB_ENV
+
+    - name: Verify Outputs
+      if: env.TF_OUTPUTS_EXPORTED != 'true'
+      run: exit 1  # 출력 변수 설정 실패 시 빌드 중단
+
+    - name: Login to AWS ECR
+      id: ecr_login
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and Push Docker Image
+      env:
+        ECR_REGISTRY: ${{ secrets.ECR_REPOSITORY_URI }}  # 전체 경로 지정
+      run: |
+        if [ -z "$ECR_REGISTRY" ]; then
+          echo "ERROR: ECR_REGISTRY is empty!"
+          exit 1
+        fi
+
+        TIMESTAMP=$(date +%Y%m%d-%H%M)
+    
+        docker buildx build \
+          --platform linux/amd64 \
+          --progress plain \
+          --build-arg PHOTOPRISM_DATABASE_SERVER="$PHOTOPRISM_DATABASE_SERVER" \
+          --build-arg PHOTOPRISM_DATABASE_NAME="$PHOTOPRISM_DATABASE_NAME" \
+          --build-arg PHOTOPRISM_DATABASE_USER="$PHOTOPRISM_DATABASE_USER" \
+          --build-arg PHOTOPRISM_DATABASE_PASSWORD="${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}" \
+          --build-arg PHOTOPRISM_ADMIN_PASSWORD="${{ secrets.PHOTOPRISM_ADMIN_PASSWORD }}" \
+          --build-arg PHOTOPRISM_S3_BUCKET="$PHOTOPRISM_S3_BUCKET" \
+          --build-arg AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+          --build-arg AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+          --build-arg AWS_REGION="${{ env.AWS_REGION }}" \
+          -t "$ECR_REGISTRY:$TIMESTAMP" \  # 날짜 태그 사용
+          --push .
+        # -t "$ECR_REGISTRY:latest" \      # 추가로 latest 태그도 사용 (옵션)
+          

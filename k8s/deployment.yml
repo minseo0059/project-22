@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: photoprism
+  labels:
+    app: photoprism
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: photoprism
+  template:
+    metadata:
+      labels:
+        app: photoprism
+    spec:
+      containers:
+      - name: photoprism
+        image: "${ECR_REPOSITORY_URI}:latest"  # ECR 이미지 주소
+        ports:
+        - containerPort: 2342
+        envFrom:  # ConfigMap과 Secret 주입
+        - configMapRef:
+            name: photoprism-config
+        - secretRef:
+            name: photoprism-secrets
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/status
+            port: 2342
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/status
+            port: 2342
+          initialDelaySeconds: 5
+          periodSeconds: 10

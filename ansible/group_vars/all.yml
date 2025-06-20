@@ -1,0 +1,6 @@
+source_bucket: "{{ lookup('env', 'SOURCE_BUCKET') }}"
+backup_bucket: "{{ lookup('env', 'TF_STATE_BUCKET') }}"
+rds_endpoint: "{{ lookup('env', 'RDS_ENDPOINT') }}"
+db_user: "{{ lookup('env', 'RDS_DB_USER') | default('root') }}"
+db_password: "{{ lookup('env', 'RDS_PASSWORD') }}"
+db_name: "{{ lookup('env', 'RDS_DB_NAME') | default('your_db') }}"

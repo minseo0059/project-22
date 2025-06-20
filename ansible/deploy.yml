@@ -1,0 +1,26 @@
+name: Bastion Setup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bastion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Ansible
+        run: sudo apt update && sudo apt install -y ansible
+
+      - name: Create SSH Key File
+        run: |
+          echo "${{ secrets.BASTION_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook playbook.yml \
+            -i "${{ secrets.BASTION_PUBLIC_IP }}," \
+            --private-key key.pem \
+            -u ubuntu

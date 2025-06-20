@@ -1,0 +1,50 @@
+name: 'Terraform Destroy'
+
+on:
+  workflow_dispatch:  # 수동 실행 전용
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+      
+      - name: Create terraform.tfvars
+        run: |
+          mkdir -p terraform
+          cat <<EOF > terraform/terraform.tfvars
+          rds_config = {
+            db_name     = "${{ secrets.PHOTOPRISM_DATABASE_NAME }}"
+            db_user     = "${{ secrets.PHOTOPRISM_DATABASE_USER }}"
+            db_password = "${{ secrets.PHOTOPRISM_DATABASE_PASSWORD }}"
+          }
+
+          s3_config = {
+            bucket_name = "${{ secrets.PHOTOPRISM_S3_BUCKET }}"
+          }
+          EOF
+          cat terraform/terraform.tfvars
+          ls -la terraform/
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=terraform/infra.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}"
+
+      - name: Terraform Destroy
+        working-directory: terraform
+        run: terraform destroy -var-file="terraform.tfvars" -auto-approve

@@ -1,0 +1,17 @@
+#project/k8s/configmap.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: photoprism-config
+data:
+  # 일반적인 환경 설정
+  PHOTOPRISM_SITE_URL: "https://5585in.click"
+  PHOTOPRISM_DEFAULT_LOCALE: "ko"
+  PHOTOPRISM_LOG_LEVEL: "info"
+  
+  # Terraform 출력값 주입
+  PHOTOPRISM_DATABASE_SERVER: "${TF_RDS_ENDPOINT}"
+  PHOTOPRISM_S3_BUCKET: "${TF_S3_BUCKET}"
+  
+  # 데이터베이스 설정 (이름은 공개 가능)
+  PHOTOPRISM_DATABASE_NAME: "photoprism" 
