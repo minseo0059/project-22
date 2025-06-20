@@ -128,13 +128,19 @@ resource "local_file" "kubeconfig" {
 }
 
 # EKS 노드에 ECR 접근 권한 추가
+resource "aws_iam_role_policy_attachment" "ecr_full_access" {
+  role       = aws_iam_role.nodes.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+}
+
+
 resource "helm_release" "alb_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   version    = "1.4.1"
-  depends_on = [local_file.kubeconfig]
+  depends_on = [aws_eks_cluster.this, aws_eks_node_group.main]
 
   set = [
     {
