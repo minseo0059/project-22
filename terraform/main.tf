@@ -123,7 +123,8 @@ module "eks" {
   alb_sg_id       = module.alb.alb_sg_id
   region          = var.region
   providers = {
-    helm = helm
+    kubernetes = kubernetes
+    helm       = helm
   }
 }
 
