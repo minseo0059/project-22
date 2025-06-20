@@ -42,14 +42,3 @@ variable "key_pair_name" {
   # 이 변수는 반드시 사용자 환경에 맞는 기존 키 페어 이름을 입력해야 합니다.
   default = "project"
 }
-
-variable "region" {
-  description = "AWS 리전"
-  type        = string
-}
-
-variable "service_account_name" {
-  description = "ALB Controller에 사용할 서비스 계정 이름"
-  type        = string
-  default     = "aws-load-balancer-controller"
-}
