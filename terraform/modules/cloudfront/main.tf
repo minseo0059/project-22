@@ -22,13 +22,14 @@ resource "aws_cloudfront_distribution" "this" {
     cached_methods   = ["GET", "HEAD"]             # 캐시할 HTTP 메서드
     target_origin_id = var.origin_id               # 대상 오리진 지정
     viewer_protocol_policy = "redirect-to-https"
+    cache_policy_id          = "658327ea-f89d-4fab-a63d-7e88639e58f6"  # AWS Managed-CachingOptimized ID
+    origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3"  # AWS Managed-AllViewer ID
     # 전달 값 설정 (쿼리 문자열/쿠키 처리 방식)
-    forwarded_values {
-      query_string = true  # 쿼리 문자열 캐시 여부 (false=모든 요청 동일 캐시)
-
-      cookies {
-        forward = "all"    # 쿠키 전달 안 함 (캐시 적중률 향상)
-      }
+#    forwarded_values {
+#      query_string = true  # 쿼리 문자열 캐시 여부 (false=모든 요청 동일 캐시)
+#      cookies {
+#        forward = "all"    # 쿠키 전달 안 함 (캐시 적중률 향상)
+#      }
     }
 
     min_ttl                = 0      # 최소 캐시 유지 시간(초)
