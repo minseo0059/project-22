@@ -79,7 +79,17 @@ resource "aws_iam_role_policy_attachment" "cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
   role       = aws_iam_role.nodes.name
 }
-
+#ㅇ
+resource "aws_iam_policy" "alb_controller" {
+  name        = "ALBControllerIAMPolicy"
+  description = "IAM policy for AWS Load Balancer Controller"
+  policy      = file("iam_policy.json")
+}
+# ㅇ
+resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
+  role       = "photoprism-eks-node-role"
+  policy_arn = aws_iam_policy.alb_controller.arn
+}
 resource "aws_iam_role_policy_attachment" "ecr_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.nodes.name
@@ -101,6 +111,7 @@ resource "aws_eks_node_group" "main" {
     aws_iam_role_policy_attachment.node_policy,
     aws_iam_role_policy_attachment.cni_policy,
     aws_iam_role_policy_attachment.ecr_readonly,
+    aws_iam_role_policy_attachment.alb_controller_attach, # ㅇ
   ]
 }
 
