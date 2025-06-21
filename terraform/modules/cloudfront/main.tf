@@ -1,11 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 4.0"  # 최소 4.x 이상 권장
-    }
-  }
-}
 # CloudFront 배포 리소스 생성
 resource "aws_cloudfront_distribution" "this" {
   # 오리진(Origin) 설정 - 트래픽이 전달될 원본 서버(ALB/S3 등)
@@ -38,7 +30,7 @@ resource "aws_cloudfront_distribution" "this" {
 #      cookies {
 #        forward = "all"    # 쿠키 전달 안 함 (캐시 적중률 향상)
 #      }
-    }
+#    }
 
     min_ttl                = 0      # 최소 캐시 유지 시간(초)
     default_ttl            = 3600   # 기본 캐시 유지 시간(1시간)
