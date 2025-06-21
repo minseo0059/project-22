@@ -302,11 +302,18 @@ jobs:
           echo "⏳ 배포 상태 확인 중..."
           kubectl rollout status deployment/photoprism --timeout=90s
 
-      - name: Debug if deployment fails
-        if: failure()
+      - name: Get Real ALB DNS
+        id: get_alb
         run: |
-          echo "❌ 배포 실패! 디버깅 시작"
-          kubectl get all
-          kubectl describe deployment photoprism
-          kubectl logs deployment/photoprism || true
-          kubectl get events --sort-by=.metadata.creationTimestamp
+          ALB_DNS=$(kubectl get ingress photoprism-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "alb_dns=${ALB_DNS}" >> $GITHUB_ENV
+
+      # 4. CloudFront 오리진 교체 후 재적용
+      - name: Patch CloudFront Origin
+        run: |
+          sed -i "s|origin_domain = .*|origin_domain = \"${{ env.alb_dns }}\"|" terraform/terraform.tfvars
+          terraform apply -target=module.cloudfront -auto-approve
+
+      # 5. 임시 ALB 제거
+      - name: Destroy temporary ALB
+        run: terraform destroy -target=module.alb -auto-approve
