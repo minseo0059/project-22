@@ -61,6 +61,6 @@ jobs:
           -target=module.ecr \
           -target=module.cloudwatch \
           -target=module.ec2 \
-          -vars "origin_domain=$k8s-default-photopri-d01a466055-1668769741.***.elb.amazonaws.com" \
+          -var="origin_domain=$k8s-default-photopri-d01a466055-1668769741.***.elb.amazonaws.com" \
           -auto-approve          
         # terraform destroy -var-file="terraform.tfvars" -auto-approve
