@@ -302,18 +302,33 @@ jobs:
           echo "⏳ 배포 상태 확인 중..."
           kubectl rollout status deployment/photoprism --timeout=90s
 
-      - name: Get Real ALB DNS
-        id: get_alb
+      # 1️⃣ Ingress 배포 후 대기 + ALB DNS 추출
+      - name: Wait for ALB DNS (Ingress Ready)
         run: |
-          ALB_DNS=$(kubectl get ingress photoprism-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-          echo "alb_dns=${ALB_DNS}" >> $GITHUB_ENV
+          for i in {1..18}; do
+            ALB_DNS=$(kubectl get ingress photoprism-ingress -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+            if [[ -n "$ALB_DNS" ]]; then
+              echo "✅ ALB DNS: $ALB_DNS"
+              echo "alb_dns=$ALB_DNS" >> $GITHUB_ENV
+              break
+            fi
+            echo "⏳ ALB 생성 대기 중... ($i/18)"
+            sleep 5
+          done
 
-      # 4. CloudFront 오리진 교체 후 재적용
-      - name: Patch CloudFront Origin
+      # 2️⃣ CloudFront만 다시 apply (origin_domain 업데이트)
+      - name: Apply CloudFront with New Origin
         run: |
-          sed -i "s|origin_domain = .*|origin_domain = \"${{ env.alb_dns }}\"|" terraform/terraform.tfvars
-          terraform apply -target=module.cloudfront -auto-approve
+          terraform -chdir=terraform init
 
-      # 5. 임시 ALB 제거
-      - name: Destroy temporary ALB
-        run: terraform destroy -target=module.alb -auto-approve
+          terraform -chdir=terraform apply \
+            -target=module.cloudfront \
+            -var="origin_domain=${{ env.alb_dns }}" \
+            -auto-approve
+
+      # 3️⃣ ALB 모듈 제거 (CloudFront 연결 이후 불필요)
+      - name: Destroy Temporary ALB Module
+        run: |
+          terraform -chdir=terraform destroy \
+            -target=module.alb \
+            -auto-approve
