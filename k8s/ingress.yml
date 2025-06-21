@@ -9,6 +9,7 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/certificate-arn: "${TF_ALB_ACM_CERT_ARN}"
     alb.ingress.kubernetes.io/healthcheck-path: "/api/v1/status"
+    alb.ingress.kubernetes.io/success-codes: "200,302" # 리다이렉션 허용
 spec:
   ingressClassName: alb
   rules:
