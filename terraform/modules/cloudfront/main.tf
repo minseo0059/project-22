@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.0"  # 최소 4.x 이상 권장
+    }
+  }
+}
 # CloudFront 배포 리소스 생성
 resource "aws_cloudfront_distribution" "this" {
   # 오리진(Origin) 설정 - 트래픽이 전달될 원본 서버(ALB/S3 등)
