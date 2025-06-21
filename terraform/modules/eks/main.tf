@@ -83,7 +83,7 @@ resource "aws_iam_role_policy_attachment" "cni_policy" {
 resource "aws_iam_policy" "alb_controller" {
   name        = "ALBControllerIAMPolicy"
   description = "IAM policy for AWS Load Balancer Controller"
-  policy      = file("${path.root}/iam_policy.json")
+  policy      = file("${path.module}/iam_policy.json")
 }
 # ㅇ
 resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
