@@ -47,20 +47,4 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: terraform
-        run: |
-          terraform destroy \
-          -target=module.vpc \
-          -target=module.s3 \
-          -target=module.acm \
-          -target=module.acm_alb \
-          -target=module.alb \
-          -target=module.route53 \
-          -target=module.rds \
-          -target=module.eks \
-          -target=aws_security_group_rule.eks_to_rds \
-          -target=module.ecr \
-          -target=module.cloudwatch \
-          -target=module.ec2 \
-          -var="origin_domain=$k8s-default-photopri-d01a466055-1668769741.***.elb.amazonaws.com" \
-          -auto-approve          
-        # terraform destroy -var-file="terraform.tfvars" -auto-approve
+        run: terraform destroy -var-file="terraform.tfvars" -auto-approve
