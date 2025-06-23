@@ -12,8 +12,9 @@ variable "domain_name" {
 }
 
 variable "origin_domain" {
-  description = "CloudFront의 오리진 도메인 이름 (예: ALB DNS)"
+  description = "(Optional) CloudFront 오리진 도메인. 지정하지 않으면 더미 ALB의 DNS 사용"
   type        = string
+  default     = null  # 기본값을 null로 설정
 }
 
 # Route53 호스팅 존 ID 변수
