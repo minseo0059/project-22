@@ -11,10 +11,10 @@ variable "domain_name" {
   default = "5585in.click"  # 사용할 도메인 이름
 }
 
-#variable "origin_domain" {
-#  description = "CloudFront의 오리진 도메인 이름 (예: ALB DNS)"
-#  type        = string
-#}
+variable "origin_domain" {
+  description = "CloudFront의 오리진 도메인 이름 (예: ALB DNS)"
+  type        = string
+}
 
 # Route53 호스팅 존 ID 변수
 variable "route53_zone_id" {
